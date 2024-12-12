@@ -1,0 +1,41 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "com.google.gms.google-services" // Google Services plugin for Firebase
+    id "dev.flutter.flutter-gradle-plugin" // Flutter plugin
+}
+
+android {
+    namespace = "com.anotherpaymentproject.payapp" // Ensure this matches your Firebase project setup
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
+    defaultConfig {
+        applicationId = "com.anotherpaymentproject.payapp" // Ensure this matches your Firebase setup
+        minSdkVersion 23
+        targetSdkVersion flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.debug // Replace with your release signing config if available
+            minifyEnabled false // Disable code shrinking for debug purposes
+            shrinkResources false
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
