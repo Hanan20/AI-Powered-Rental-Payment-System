@@ -20,11 +20,11 @@ class _LoginPageState extends State<LoginPage> {
 
   final TextEditingController passwordController = TextEditingController();
 
-  //login method
   void login() async {
     // Show loading indicator
     showDialog(
       context: context,
+      barrierDismissible: false, // Prevent dialog from closing accidentally
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
@@ -42,16 +42,25 @@ class _LoginPageState extends State<LoginPage> {
           .doc(userCredential.user!.email)
           .get();
 
+      // Ensure the widget is still mounted
+      if (!mounted) return;
+
+      // Dismiss the loading dialog BEFORE navigating
+      Navigator.pop(context);
+
       // Redirect based on role
       String role = userDoc['role'];
       if (role == 'tenant') {
-        Navigator.pushReplacementNamed(context, '/tenant-dashboard');
+        // Now pushReplacementNamed can safely be called
+        Navigator.pushReplacementNamed(context, '/tenantdashboard');
       } else if (role == 'landlord') {
-        Navigator.pushReplacementNamed(context, '/landlord-dashboard');
+        Navigator.pushReplacementNamed(context, '/landlorddashboard');
       }
     } on FirebaseAuthException catch (e) {
-      // Display error to user
-      Navigator.pop(context); // Remove loading indicator
+      // Ensure the widget is still mounted
+      if (!mounted) return;
+
+      Navigator.pop(context); // Remove loading indicator first
       displayMessageToUser(e.message ?? "Login failed", context);
     }
   }
@@ -129,7 +138,9 @@ class _LoginPageState extends State<LoginPage> {
                 ],
               ),
               GestureDetector(
-                onTap: widget.onTap,
+                onTap: () {
+                  Navigator.pushNamed(context, '/register');
+                },
                 child: const Text(
                   "Register Here",
                   style: TextStyle(fontWeight: FontWeight.bold),

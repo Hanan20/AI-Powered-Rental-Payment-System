@@ -1,44 +1,73 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:payapp/chat_page.dart';
 import 'package:payapp/components/my_drawer.dart';
 import 'package:payapp/tenant_dashbord/Paymentpage.dart';
 import 'package:payapp/tenant_dashbord/homecontent.dart';
-import 'package:payapp/tenant_dashbord/messaging.dart';
 import 'package:payapp/tenant_dashbord/notification.dart';
 
 class Tenantdashboard extends StatefulWidget {
-  const Tenantdashboard({super.key});
+  final String tenantEmail; // Tenant's email passed to dashboard
+  final String landlordEmail; // Landlord's email to chat with
+
+  const Tenantdashboard({
+    super.key,
+    required this.tenantEmail,
+    required this.landlordEmail,
+  });
 
   @override
   State<Tenantdashboard> createState() => _HomepageState();
 }
 
 class _HomepageState extends State<Tenantdashboard> {
-  int _currentIndex = 0; // Track the currently selected page
+  int _currentIndex = 0;
 
   // List of pages
-  final List<Widget> _pages = [
-    const HomeContent(), // Replace with your actual page classes
-    const Paymentpage(),
-    const NotificationPage(),
-    Messaging(),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const HomeContent(),
+      const Paymentpage(),
+      const NotificationPage(),
+      const SizedBox(), // Placeholder for Chat navigation, as we will push it separately
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: const MyDrawer(),
-      body: _pages[_currentIndex], // Display the selected page
+      body: _currentIndex == 3
+          ? const SizedBox() // Placeholder, as ChatPage is navigated separately
+          : _pages[_currentIndex], // Display the selected page
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        currentIndex: _currentIndex, // Set the current index
+        currentIndex: _currentIndex,
         onTap: (index) {
-          setState(() {
-            _currentIndex = index; // Update the selected index
-          });
+          if (index == 3) {
+            // Navigate to the ChatPage when the "Chat" tab is clicked
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ChatPage(
+                  landlordEmail:
+                      widget.landlordEmail, // Pass actual landlord email
+                  tenantEmail: widget.tenantEmail, // Pass actual tenant email
+                ),
+              ),
+            );
+          } else {
+            setState(() {
+              _currentIndex = index; // Update the current index for other tabs
+            });
+          }
         },
-        selectedItemColor:
-            Color.fromARGB(255, 12, 112, 117), // Color for selected icons
-        unselectedItemColor: Colors.grey, // Color for unselected icons
+        selectedItemColor: const Color.fromARGB(255, 12, 112, 117),
+        unselectedItemColor: Colors.grey,
         showUnselectedLabels: true,
         items: const [
           BottomNavigationBarItem(

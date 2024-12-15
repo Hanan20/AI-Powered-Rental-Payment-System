@@ -12,7 +12,7 @@ class AuthWrapper extends StatelessWidget {
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return CircularProgressIndicator();
+          return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasData) {
           // User is signed in; get their role and navigate
           return FutureBuilder<DocumentSnapshot>(
@@ -22,21 +22,30 @@ class AuthWrapper extends StatelessWidget {
                 .get(),
             builder: (context, userSnapshot) {
               if (userSnapshot.connectionState == ConnectionState.waiting) {
-                return CircularProgressIndicator();
+                return const Center(child: CircularProgressIndicator());
               } else if (userSnapshot.hasData && userSnapshot.data != null) {
-                String role = userSnapshot.data!['role'];
-                if (role == 'tenant') {
-                  return Tenantdashboard();
-                } else if (role == 'landlord') {
-                  return Landlorddashboard();
+                final userRole = userSnapshot.data!['role'];
+                final userEmail = snapshot.data!.email!;
+                if (userRole == 'tenant') {
+                  return Tenantdashboard(
+                    tenantEmail: userEmail,
+                    landlordEmail: userSnapshot
+                        .data!['landlordEmail'], // Fetch landlord email
+                  );
+                } else if (userRole == 'landlord') {
+                  return Landlorddashboard(
+                    landlordEmail: userEmail,
+                    tenantEmail:
+                        userSnapshot.data!['tenantEmail'], // Fetch tenant email
+                  );
                 }
               }
-              return LoginPage(onTap: null);
+              return const LoginPage(onTap: null);
             },
           );
         } else {
           // User is not signed in
-          return LoginPage(onTap: null);
+          return const LoginPage(onTap: null);
         }
       },
     );

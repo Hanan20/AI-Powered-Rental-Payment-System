@@ -56,18 +56,43 @@ class _RegisterState extends State<Register> {
     }
   }
 
-  // Create a user document with role in Firestore
   Future<void> createUserDocument(UserCredential? userCredential) async {
     if (userCredential != null && userCredential.user != null) {
-      await FirebaseFirestore.instance
-          .collection("Users")
-          .doc(userCredential.user!.email)
-          .set({
-        'email': userCredential.user!.email,
+      final String email = userCredential.user!.email!;
+      final userRef = FirebaseFirestore.instance.collection('Users').doc(email);
+
+      // Save user details in the Users collection
+      await userRef.set({
+        'email': email,
         'username': usernameController.text,
-        'role': _role, // Save the user's role (tenant or landlord)
+        'role': _role, // Use the role from your form
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      // Add user to the specific role-based collection
+      if (_role == 'landlord') {
+        // Save to Landlords collection
+        final landlordRef =
+            FirebaseFirestore.instance.collection('landlords').doc(email);
+
+        await landlordRef.set({
+          'email': email,
+          'username': usernameController.text,
+          'createdAt': FieldValue.serverTimestamp(),
+          'properties': [], // Initialize landlord properties as empty
+        });
+      } else if (_role == 'tenant') {
+        // Save to Tenants collection
+        final tenantRef =
+            FirebaseFirestore.instance.collection('tenants').doc(email);
+
+        await tenantRef.set({
+          'email': email,
+          'username': usernameController.text,
+          'createdAt': FieldValue.serverTimestamp(),
+          'houseID': null, // Initialize tenant house info
+        });
+      }
     }
   }
 
