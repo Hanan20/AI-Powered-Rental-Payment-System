@@ -30,17 +30,22 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // Sign in with Firebase
+      print("Attempting to log in...");
       UserCredential userCredential =
           await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
+      print("Login successful for: ${userCredential.user?.email}");
+
       // Fetch user role from Firestore
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection("Users")
           .doc(userCredential.user!.email)
           .get();
+
+      print("User document fetched: ${userDoc.data()}");
 
       // Ensure the widget is still mounted
       if (!mounted) return;
@@ -50,8 +55,8 @@ class _LoginPageState extends State<LoginPage> {
 
       // Redirect based on role
       String role = userDoc['role'];
+      print("User role: $role");
       if (role == 'tenant') {
-        // Now pushReplacementNamed can safely be called
         Navigator.pushReplacementNamed(context, '/tenantdashboard');
       } else if (role == 'landlord') {
         Navigator.pushReplacementNamed(context, '/landlorddashboard');
@@ -61,7 +66,12 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       Navigator.pop(context); // Remove loading indicator first
+      print("FirebaseAuthException: ${e.message}");
       displayMessageToUser(e.message ?? "Login failed", context);
+    } catch (e) {
+      Navigator.pop(context);
+      print("Unexpected error: $e");
+      displayMessageToUser("Unexpected error occurred", context);
     }
   }
 

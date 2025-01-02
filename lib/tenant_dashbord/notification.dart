@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -9,7 +9,7 @@ class NotificationPage extends StatefulWidget {
 }
 
 class _NotificationPageState extends State<NotificationPage> {
-  List<Map<String, String>> notifications = [];
+  List<Map<String, dynamic>> notifications = [];
   String selectedFilter = 'All';
 
   @override
@@ -19,39 +19,39 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   Future<void> loadNotifications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedNotifications = prefs.getStringList('notifications') ?? [];
+    // Retrieve notifications from Firestore
+    final snapshot =
+        await FirebaseFirestore.instance.collection('Notifications').get();
+
     setState(() {
-      notifications = savedNotifications.map((e) {
-        final parts = e.split('|');
-        return {
-          'title': parts[0],
-          'body': parts[1],
-          'data': parts[2],
-          'timestamp':
-              parts.length > 3 ? parts[3] : DateTime.now().toIso8601String(),
-          'read': parts.length > 4 ? parts[4] : 'false',
-        };
+      notifications = snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id; // Include the document ID
+        return data;
       }).toList();
     });
   }
 
-  Future<void> markAsRead(int index) async {
-    notifications[index]['read'] = 'true';
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      'notifications',
-      notifications
-          .map((n) =>
-              '${n['title']}|${n['body']}|${n['data']}|${n['timestamp']}|${n['read']}')
-          .toList(),
-    );
-    setState(() {});
+  Future<void> markAsRead(String notificationId) async {
+    // Update the 'read' status in Firestore
+    await FirebaseFirestore.instance
+        .collection('Notifications')
+        .doc(notificationId)
+        .update({'read': true});
+
+    setState(() {
+      notifications = notifications.map((n) {
+        if (n['id'] == notificationId) {
+          n['read'] = true;
+        }
+        return n;
+      }).toList();
+    });
   }
 
-  List<Map<String, String>> getFilteredNotifications() {
+  List<Map<String, dynamic>> getFilteredNotifications() {
     if (selectedFilter == 'Unread') {
-      return notifications.where((n) => n['read'] == 'false').toList();
+      return notifications.where((n) => n['read'] == false).toList();
     }
     return notifications;
   }
@@ -62,12 +62,13 @@ class _NotificationPageState extends State<NotificationPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Center(
-            child: const Text(
-          'Notifications',
-          style: TextStyle(color: Color.fromARGB(255, 235, 238, 238)),
-        )),
-        backgroundColor: Color.fromARGB(255, 12, 112, 117),
+        title: const Center(
+          child: Text(
+            'Notifications',
+            style: TextStyle(color: Color.fromARGB(255, 235, 238, 238)),
+          ),
+        ),
+        backgroundColor: const Color.fromARGB(255, 12, 112, 117),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -88,8 +89,10 @@ class _NotificationPageState extends State<NotificationPage> {
               itemCount: filteredNotifications.length,
               itemBuilder: (context, index) {
                 final notification = filteredNotifications[index];
-                final isRead = notification['read'] == 'true';
-                final timestamp = DateTime.parse(notification['timestamp']!);
+                final isRead = notification['read'] ?? false;
+                final timestamp = notification['timestamp'] != null
+                    ? (notification['timestamp'] as Timestamp).toDate()
+                    : DateTime.now();
 
                 return Card(
                   margin:
@@ -122,7 +125,7 @@ class _NotificationPageState extends State<NotificationPage> {
                     trailing: Icon(Icons.arrow_forward_ios,
                         color: Colors.grey.shade400, size: 18),
                     onTap: () {
-                      markAsRead(index);
+                      markAsRead(notification['id']);
                       showDialog(
                         context: context,
                         builder: (context) => AlertDialog(
@@ -132,8 +135,6 @@ class _NotificationPageState extends State<NotificationPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(notification['body'] ?? ''),
-                              const SizedBox(height: 10),
-                              Text('Additional Data: ${notification['data']}'),
                               const SizedBox(height: 10),
                               Text(
                                 'Received: ${timestamp.toLocal()}',

@@ -45,6 +45,11 @@ class _CalendarPageState extends State<CalendarPage> {
               daysRemaining =
                   nextPaymentDate!.difference(DateTime.now()).inDays;
             }
+
+            // Trigger notification if overdue
+            if (daysRemaining != null && daysRemaining! <= 0) {
+              _triggerOverdueNotification(user.email!);
+            }
           });
         }
       }
@@ -63,7 +68,7 @@ class _CalendarPageState extends State<CalendarPage> {
 
   void _updateNextPaymentDate() {
     if (recentPaymentDate != null) {
-      final nextPayment = recentPaymentDate!.add(Duration(days: 30));
+      final nextPayment = recentPaymentDate!.add(Duration(days: 31));
       setState(() {
         nextPaymentDate = nextPayment;
         daysRemaining = nextPaymentDate!.difference(DateTime.now()).inDays;
@@ -89,6 +94,26 @@ class _CalendarPageState extends State<CalendarPage> {
 
       await _saveDates();
       _updateNextPaymentDate();
+    }
+  }
+
+  Future<void> _triggerOverdueNotification(String email) async {
+    try {
+      final timestamp = FieldValue.serverTimestamp();
+
+      // Save the notification to Firestore
+      await _firestore.collection('Notifications').add({
+        'title': 'Payment Overdue',
+        'body':
+            'Your rent payment is overdue. Please make the payment as soon as possible.',
+        'data': email,
+        'timestamp': timestamp,
+        'read': false,
+      });
+
+      print('Overdue notification triggered successfully!');
+    } catch (e) {
+      print('Error triggering notification: $e');
     }
   }
 

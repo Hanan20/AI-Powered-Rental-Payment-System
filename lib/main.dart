@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -7,10 +8,11 @@ import 'package:payapp/auth/login_or_register.dart';
 import 'package:payapp/landlord_dashboard/Properties.dart';
 import 'package:payapp/landlord_dashboard/landlorddashboard.dart';
 import 'package:payapp/landlord_dashboard/paymentanalysis.dart';
-import 'package:payapp/landlord_dashboard/tenant.dart';
+import 'package:payapp/landlord_dashboard/invoice.dart';
 import 'package:payapp/login_page.dart';
 import 'package:payapp/register.dart';
 import 'package:payapp/tenant_dashbord/calendar.dart';
+import 'package:payapp/tenant_dashbord/invoices.dart';
 import 'package:payapp/tenant_dashbord/notification.dart';
 import 'package:payapp/tenant_dashbord/profile.dart';
 import 'package:payapp/tenant_dashbord/tenantdashboard.dart';
@@ -60,8 +62,11 @@ class MyApp extends StatelessWidget {
         '/profile_page': (context) => ProfilePage(),
         '/paymentanalysis': (context) => Paymentanalysis(),
         '/Properties': (context) => const Properties(),
-        '/tenant': (context) => const Tenant(),
+        '/CreateInvoicePage': (context) => const CreateInvoicePage(),
         '/paymentanalysis': (context) => const Paymentanalysis(),
+        '/invoices': (context) {
+          return const InvoicePage();
+        },
       },
     );
   }

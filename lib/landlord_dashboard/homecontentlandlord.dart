@@ -195,7 +195,7 @@ class _Homecontentlandlord extends State<Homecontentlandlord> {
               // Invoices Section
               GestureDetector(
                 onTap: () {
-                  Navigator.pushNamed(context, '/tenant');
+                  Navigator.pushNamed(context, '/CreateInvoicePage');
                 },
                 child: Container(
                   width: 800,
@@ -217,7 +217,7 @@ class _Homecontentlandlord extends State<Homecontentlandlord> {
                     children: [
                       Icon(Icons.people),
                       Text(
-                        "Tenant",
+                        "Create Invoice",
                         style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -225,7 +225,7 @@ class _Homecontentlandlord extends State<Homecontentlandlord> {
                       ),
                       SizedBox(height: 10),
                       Text(
-                        "Your Tenent info will be displayed here.",
+                        "Create an invoice and send it to your Tenants.",
                         style: TextStyle(color: Color.fromARGB(255, 7, 46, 51)),
                       ),
                     ],

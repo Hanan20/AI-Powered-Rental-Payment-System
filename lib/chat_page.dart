@@ -1,13 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // NEW IMPORT
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'chat_service.dart';
 
 class ChatPage extends StatefulWidget {
   final String landlordEmail;
   final String tenantEmail;
-  const ChatPage(
-      {super.key, required this.landlordEmail, required this.tenantEmail});
+
+  const ChatPage({
+    super.key,
+    required this.landlordEmail,
+    required this.tenantEmail,
+  });
 
   @override
   State<ChatPage> createState() => _ChatPageState();
@@ -38,7 +42,15 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
+      appBar: AppBar(
+        title: const Center(
+          child: Text(
+            'Chat/Message',
+            style: TextStyle(color: Color.fromARGB(255, 235, 238, 238)),
+          ),
+        ),
+        backgroundColor: const Color.fromARGB(255, 12, 112, 117),
+      ),
       body: Column(
         children: [
           // Chat messages
@@ -63,21 +75,51 @@ class _ChatPageState extends State<ChatPage> {
                           final message = messages[index];
                           final sender = message['sender'];
                           final text = message['text'];
+                          final isCurrentUser = sender ==
+                              FirebaseAuth.instance.currentUser?.email;
 
-                          return ListTile(
-                            title: Align(
-                              alignment: sender == widget.landlordEmail
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
-                              child: Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: sender == widget.landlordEmail
-                                      ? Colors.blue[100]
-                                      : Colors.grey[300],
-                                  borderRadius: BorderRadius.circular(10),
+                          return Align(
+                            alignment: isCurrentUser
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(
+                                  vertical: 4.0, horizontal: 8.0),
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: isCurrentUser
+                                    ? Colors.blue[100]
+                                    : Colors.grey[300],
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  topRight: Radius.circular(12),
+                                  bottomLeft: isCurrentUser
+                                      ? Radius.circular(12)
+                                      : Radius.zero,
+                                  bottomRight: isCurrentUser
+                                      ? Radius.zero
+                                      : Radius.circular(12),
                                 ),
-                                child: Text(text),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    sender == widget.landlordEmail
+                                        ? 'Landlord'
+                                        : 'Tenant',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    text,
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ],
                               ),
                             ),
                           );
@@ -87,20 +129,31 @@ class _ChatPageState extends State<ChatPage> {
                   ),
           ),
 
-          // Message input field
-          Padding(
-            padding: const EdgeInsets.all(8.0),
+          // Message input field inside a box
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              border: Border.all(
+                color: Colors.grey.shade400,
+              ),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            margin: const EdgeInsets.all(8.0),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _messageController,
-                    decoration:
-                        const InputDecoration(hintText: 'Type your message...'),
+                    decoration: const InputDecoration(
+                      hintText: 'Type your message...',
+                      border: InputBorder.none,
+                    ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send),
+                  icon: const Icon(Icons.send,
+                      color: Color.fromARGB(255, 12, 112, 117)),
                   onPressed: () {
                     final currentUserEmail =
                         FirebaseAuth.instance.currentUser?.email;
@@ -108,8 +161,7 @@ class _ChatPageState extends State<ChatPage> {
                         currentUserEmail != null) {
                       _chatService.sendMessage(
                         chatId: _chatId!,
-                        senderEmail:
-                            currentUserEmail, // Use current user's email
+                        senderEmail: currentUserEmail,
                         messageText: _messageController.text.trim(),
                       );
                       _messageController.clear();

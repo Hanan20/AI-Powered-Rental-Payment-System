@@ -31,7 +31,7 @@ class _HomepageState extends State<Tenantdashboard> {
     super.initState();
     _pages = [
       const HomeContent(),
-      const Paymentpage(),
+      PaymentPage(),
       const NotificationPage(),
       const SizedBox(), // Placeholder for Chat navigation, as we will push it separately
     ];
