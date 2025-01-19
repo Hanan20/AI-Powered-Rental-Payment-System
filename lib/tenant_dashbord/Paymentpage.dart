@@ -20,6 +20,34 @@ class PaymentPage extends StatefulWidget {
 
 class _PaymentPageState extends State<PaymentPage> {
   bool _isProcessing = false;
+  bool _isPaid = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPaymentStatus();
+  }
+
+  /// Check Firestore to see if invoice is already paid.
+  Future<void> _checkPaymentStatus() async {
+    if (widget.invoiceId != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('invoices')
+            .doc(widget.invoiceId)
+            .get();
+
+        if (doc.exists && doc.data() != null) {
+          final data = doc.data()!;
+          if (data['paid'] == true) {
+            setState(() => _isPaid = true);
+          }
+        }
+      } catch (e) {
+        print("Error checking payment status: $e");
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,9 +78,12 @@ class _PaymentPageState extends State<PaymentPage> {
                     style: const TextStyle(fontSize: 18),
                   ),
                   const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () => handlePaymentInitialization(),
-                    child: const Text('Pay'),
+                  ElevatedButton.icon(
+                    onPressed: _isPaid ? null : _handlePaymentInitialization,
+                    icon: _isPaid
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : const Icon(Icons.payment),
+                    label: Text(_isPaid ? 'Paid' : 'Pay Now'),
                   ),
                 ],
               ),
@@ -60,55 +91,70 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  Future<void> handlePaymentInitialization() async {
-    setState(() {
-      _isProcessing = true;
-    });
+  /// 1) Immediately mark invoice as paid (no matter what).
+  /// 2) Create a separate 'receipts' doc.
+  /// 3) Then proceed with Flutterwave payment. If success, update the receipt doc with the transaction ref.
+  Future<void> _handlePaymentInitialization() async {
+    // If there's no invoiceId, we can't do anything
+    if (widget.invoiceId == null) return;
+
+    setState(() => _isProcessing = true);
 
     try {
-      // Set up the customer details
-      final Customer customer = Customer(
-        name: "yasin", // Replace dynamically
-        phoneNumber: "0760564547", // Replace dynamically
-        email: "yasin@gmail.com", // Replace dynamically
+      // ---------------------------------------------------
+      // STEP 1: Mark the invoice as paid RIGHT AWAY
+      // ---------------------------------------------------
+      await _markInvoicePaidImmediately();
+
+      // ---------------------------------------------------
+      // STEP 2: Create a receipt document in 'receipts'
+      // ---------------------------------------------------
+      final receiptId = await _createReceiptDoc();
+
+      // Show invoice as paid locally:
+      setState(() => _isPaid = true);
+
+      // Optionally, show a quick notification
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invoice marked as paid.')),
       );
 
-      // Initialize the Flutterwave payment
+      // ---------------------------------------------------
+      // STEP 3: Now attempt the real Flutterwave payment
+      // ---------------------------------------------------
+      final Customer customer = Customer(
+        name: "yasin", // or actual tenant name
+        phoneNumber: "0760564547",
+        email: "yasin@gmail.com",
+      );
+
       final Flutterwave flutterwave = Flutterwave(
         context: context,
-        publicKey:
-            "FLWPUBK_TEST-fb982e12991315330487facf1b7f1e9d-X", // Replace with your Flutterwave public key
+        publicKey: "FLWPUBK_TEST-fb982e12991315330487facf1b7f1e9d-X",
         currency: "UGX",
-        redirectUrl:
-            "https://your-redirect-url.com", // Replace with your redirect URL
-        txRef:
-            "TX-${DateTime.now().millisecondsSinceEpoch}", // Unique transaction reference
-        amount: widget.rentAmount ?? "30000", // Rent amount to pay
+        redirectUrl: "https://your-redirect-url.com",
+        txRef: "TX-${DateTime.now().millisecondsSinceEpoch}",
+        amount: widget.rentAmount ?? "30000",
         customer: customer,
         paymentOptions: "card, mobilemoneyuganda, ussd",
         customization: Customization(
           title: "Rent Payment",
         ),
-        isTestMode: true, // Set to false for live mode
+        isTestMode: true,
       );
 
-      // Handle payment response
       final response = await flutterwave.charge();
 
       if (response != null && response.status == "success") {
-        // Payment successful, mark the invoice as paid
-        await FirebaseFirestore.instance
-            .collection('invoices')
-            .doc(widget.invoiceId)
-            .update({'paid': true});
+        // Payment successful on Flutterwave side
+        // Optionally update the receipt doc with the transaction reference
+        await _updateReceiptWithTxRef(receiptId, response.txRef);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Payment Successful!')),
         );
-
-        Navigator.pop(context);
       } else {
-        // Payment failed or canceled
+        // Payment failed or canceled on Flutterwave side
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -119,17 +165,83 @@ class _PaymentPageState extends State<PaymentPage> {
           ),
         );
       }
+
+      // We do NOT revert the invoice to unpaid, as per your requirement.
+      Navigator.pop(context);
     } catch (e) {
-      // Handle errors
-      print('Error initializing payment: $e');
+      print("Error initializing payment: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Payment initialization failed. Please try again.')),
       );
     } finally {
-      setState(() {
-        _isProcessing = false;
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  /// Immediately sets 'paid = true' in the invoice doc.
+  /// Also calls '_sendNotification()' to record a success notification.
+  Future<void> _markInvoicePaidImmediately() async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('invoices')
+          .doc(widget.invoiceId)
+          .update({'paid': true});
+
+      print("Invoice ${widget.invoiceId} marked as paid (immediately).");
+
+      // Optionally, send a success notification
+      await _sendNotification();
+    } catch (e) {
+      print("Error marking invoice as paid: $e");
+    }
+  }
+
+  /// Create a separate receipt doc in 'receipts' collection with basic info.
+  Future<String> _createReceiptDoc() async {
+    final receiptRef = FirebaseFirestore.instance.collection('receipts').doc();
+    final receiptNumber = "RCPT-${DateTime.now().millisecondsSinceEpoch}";
+
+    await receiptRef.set({
+      'receiptId': receiptRef.id,
+      'invoiceId': widget.invoiceId,
+      'propertyId': widget.propertyId,
+      'rentAmount': widget.rentAmount,
+      'receiptNumber': receiptNumber,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    print("Created new receipt doc in 'receipts': ${receiptRef.id}");
+    return receiptRef.id;
+  }
+
+  /// Update the existing receipt doc to store the Flutterwave tx reference.
+  Future<void> _updateReceiptWithTxRef(String receiptId, String? txRef) async {
+    if (txRef == null) return;
+    try {
+      await FirebaseFirestore.instance
+          .collection('receipts')
+          .doc(receiptId)
+          .update({'flutterwaveTxRef': txRef});
+
+      print("Updated receipt doc ($receiptId) with Flutterwave txRef: $txRef");
+    } catch (e) {
+      print("Error updating receipt with txRef: $e");
+    }
+  }
+
+  /// Send a success notification for invoice payment.
+  Future<void> _sendNotification() async {
+    try {
+      await FirebaseFirestore.instance.collection('Notifications').add({
+        'title': 'Payment Successful',
+        'body':
+            'You have successfully paid UGX ${widget.rentAmount} for Property ID ${widget.propertyId}.',
+        'timestamp': FieldValue.serverTimestamp(),
+        'read': false, // Default notification as unread
       });
+    } catch (e) {
+      print("Error sending notification: $e");
     }
   }
 }

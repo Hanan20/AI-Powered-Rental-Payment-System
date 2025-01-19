@@ -155,37 +155,43 @@ class _HomepageState extends State<HomeContent> {
                   ),
                 ),
 
-                // Transactions Section
-                Container(
-                  width: 800,
-                  height: 200,
-                  padding: const EdgeInsets.all(16.0),
-                  margin: const EdgeInsets.only(bottom: 16.0),
-                  decoration: BoxDecoration(
-                    color: Colors.green[50],
-                    borderRadius: BorderRadius.circular(12.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.3),
-                        spreadRadius: 2,
-                        blurRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.receipt_long),
-                      Text(
-                        "Transactions",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                // Transactions Section//receipts
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(context, '/ReceiptsPage');
+                  },
+                  child: Container(
+                    width: 800,
+                    height: 200,
+                    padding: const EdgeInsets.all(16.0),
+                    margin: const EdgeInsets.only(bottom: 16.0),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(12.0),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.3),
+                          spreadRadius: 2,
+                          blurRadius: 5,
                         ),
-                      ),
-                      SizedBox(height: 10),
-                      Text("Your transaction history will be displayed here."),
-                    ],
+                      ],
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.receipt_long),
+                        Text(
+                          "Transactions Receipts",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                            "Your transaction history will be displayed here."),
+                      ],
+                    ),
                   ),
                 ),
 // Calendar Section

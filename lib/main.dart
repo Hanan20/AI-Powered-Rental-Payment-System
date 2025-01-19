@@ -15,6 +15,7 @@ import 'package:payapp/tenant_dashbord/calendar.dart';
 import 'package:payapp/tenant_dashbord/invoices.dart';
 import 'package:payapp/tenant_dashbord/notification.dart';
 import 'package:payapp/tenant_dashbord/profile.dart';
+import 'package:payapp/tenant_dashbord/receipts.dart';
 import 'package:payapp/tenant_dashbord/tenantdashboard.dart';
 import 'package:payapp/themes/dark_mode.dart';
 import 'package:payapp/themes/light_mode.dart';
@@ -61,12 +62,13 @@ class MyApp extends StatelessWidget {
         '/calendar': (context) => const CalendarPage(),
         '/profile_page': (context) => ProfilePage(),
         '/paymentanalysis': (context) => Paymentanalysis(),
-        '/Properties': (context) => const Properties(),
+        '/Properties': (context) => const PropertyPage(),
         '/CreateInvoicePage': (context) => const CreateInvoicePage(),
         '/paymentanalysis': (context) => const Paymentanalysis(),
         '/invoices': (context) {
           return const InvoicePage();
         },
+        '/ReceiptsPage': (context) => const ReceiptsPage(),
       },
     );
   }

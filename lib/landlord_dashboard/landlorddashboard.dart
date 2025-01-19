@@ -31,7 +31,7 @@ class _LandlorddashboardState extends State<Landlorddashboard> {
     super.initState();
     _pages = [
       const Homecontentlandlord(),
-      const Transaction(),
+      const ReceiptsPage(),
       const Notificationpage(),
       const SizedBox(), // Placeholder for Chat navigation
     ];
